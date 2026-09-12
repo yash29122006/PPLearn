@@ -28,7 +28,7 @@ private readonly authService = inject(AuthService);
     return new Promise<void>((resolve, reject) => {
 
       this.client = new Client({
-  brokerURL: 'ws://localhost:8080/ws',
+brokerURL: 'wss://p2p-learn.onrender.com/ws',
 
   connectHeaders: {
     Authorization: `Bearer ${this.authService.getToken()}`
