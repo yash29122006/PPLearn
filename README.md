@@ -16,8 +16,6 @@ https://p2plearn-git-main-p2plearn.vercel.app/login
 
 https://p2p-learn.onrender.com
 
-### Demo Video
-
 ---
 
 # ✨ Features
