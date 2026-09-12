@@ -12,15 +12,11 @@ The platform provides separate experiences for **Students** and **Administrators
 
 Frontend:
 
-> Add your deployed Vercel URL here
+https://p2plearn-git-main-p2plearn.vercel.app/login
 
 Backend API:
 
-> Add your deployed Render URL here
-
-### Demo Video
-
-> Add your demo video link here
+https://p2p-learn.onrender.com
 
 ---
 
