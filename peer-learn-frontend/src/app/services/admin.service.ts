@@ -13,7 +13,8 @@ export interface AdminStudent {
 export interface ApplicationResponse {
   applicationId: number;
   studentId: number;
-  studentUsername: string;
+  username: string;
+  email: string;
   status: string;
   createdAt: string;
 }
