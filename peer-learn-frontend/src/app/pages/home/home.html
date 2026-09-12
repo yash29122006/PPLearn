@@ -1,0 +1,544 @@
+<div class="home-page">
+
+  <header class="home-header">
+
+    <div>
+      <h1>P2P Learn</h1>
+      <p>Peer-to-peer learning competition</p>
+    </div>
+
+    <div class="header-right">
+
+      <div class="user-info">
+        <strong>{{ currentUser?.username }}</strong>
+        <span>
+          Points: {{ currentUser?.totalPoints ?? 0 }}
+        </span>
+      </div>
+
+      <button class="logout-button" (click)="logout()">
+        Logout
+      </button>
+
+    </div>
+
+  </header>
+
+
+  <main class="home-content">
+
+    <section class="competition-card">
+
+      <h2>Current Competition</h2>
+
+      <p>
+        Weekly peer-to-peer coding competition
+      </p>
+
+      <div class="competition-info">
+
+        <div>
+          <span class="label">Status</span>
+          <strong>
+            @if (competition) {
+            {{ competition.status === 'ACTIVE'
+            ? 'Active'
+            : competition.status === 'COMPLETED'
+            ? 'Completed'
+            : competition.status === 'LEADERBOARD_VISIBLE'
+            ? 'Leaderboard Visible'
+            : competition.status }}
+            } @else {
+            Loading...
+            }
+          </strong>
+        </div>
+
+        <div>
+          <span class="label">Week</span>
+          <strong>
+            @if (competition) {
+            {{ competition.weekStart | date:'dd MMM' }}
+            -
+            {{ competition.weekEnd | date:'dd MMM' }}
+            } @else {
+            Loading...
+            }
+          </strong>
+        </div>
+
+      </div>
+
+    </section>
+
+    <section class="leaderboard-section">
+
+      <div class="section-header">
+
+        <div>
+          <h2>Weekly Leaderboard</h2>
+          <p>Top students in the current competition.</p>
+        </div>
+
+      </div>
+
+      @if (loadingLeaderboard) {
+
+      <div class="leaderboard-empty">
+        Loading leaderboard...
+      </div>
+
+      } @else if (leaderboardErrorMessage) {
+
+      <div class="leaderboard-empty">
+
+        <h3>Something went wrong</h3>
+
+        <p>{{ leaderboardErrorMessage }}</p>
+
+        <button class="post-button" (click)="loadLeaderboard()">
+          Retry
+        </button>
+
+      </div>
+
+      } @else if (leaderboard.length === 0) {
+
+      <div class="leaderboard-empty">
+
+        <h3>No leaderboard yet</h3>
+
+        <p>
+          The weekly leaderboard will appear here.
+        </p>
+
+      </div>
+
+      } @else {
+
+      <div class="leaderboard-list">
+
+        @for (
+        entry of leaderboard;
+        track entry.studentId
+        ) {
+
+        <div class="leaderboard-row" [class.current-user]="
+            entry.studentId === currentUser?.userId
+          ">
+
+          <div class="leaderboard-rank">
+            #{{ entry.rank }}
+          </div>
+
+          <div class="leaderboard-student">
+
+            <strong>
+              {{ entry.studentUsername }}
+            </strong>
+
+            @if (entry.studentId === currentUser?.userId) {
+            <span class="you-badge">You</span>
+            }
+
+          </div>
+
+          <div class="leaderboard-points">
+
+            <strong>
+              {{ entry.totalPoints }}
+            </strong>
+
+            <span>points</span>
+
+          </div>
+
+        </div>
+
+        }
+
+      </div>
+
+      }
+
+    </section>
+
+    <section class="questions-section">
+
+      <div class="section-header">
+
+        <div>
+          <h2>Today's Questions</h2>
+          <p>
+            Solve questions posted by other students.
+          </p>
+        </div>
+
+        <button class="post-button" (click)="openPostForm()">
+          + Post Question
+        </button>
+
+      </div>
+
+      @if (showPostForm) {
+
+      <div class="post-form-container">
+
+        <div class="post-form-header">
+
+          <div>
+            <h3>Post Today's Question</h3>
+            <p>
+              Share a LeetCode question with the community.
+            </p>
+          </div>
+
+          <button type="button" class="close-button" (click)="closePostForm()">
+            ×
+          </button>
+
+        </div>
+
+
+        <form [formGroup]="questionForm" (ngSubmit)="submitQuestion()">
+
+          <div class="form-group">
+
+            <label for="title">
+              Question Title
+            </label>
+
+            <input id="title" type="text" formControlName="title" placeholder="e.g. Two Sum" />
+
+            @if (
+            questionForm.controls.title.touched &&
+            questionForm.controls.title.hasError('required')
+            ) {
+            <small>
+              Question title is required.
+            </small>
+            }
+
+            @if (
+            questionForm.controls.title.touched &&
+            questionForm.controls.title.hasError('maxlength')
+            ) {
+            <small>
+              Title cannot exceed 255 characters.
+            </small>
+            }
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="description">
+              Description
+            </label>
+
+            <textarea id="description" rows="5" formControlName="description"
+              placeholder="Briefly describe the problem..."></textarea>
+
+            @if (
+            questionForm.controls.description.touched &&
+            questionForm.controls.description.hasError('maxlength')
+            ) {
+            <small>
+              Description cannot exceed 5000 characters.
+            </small>
+            }
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="leetcodeUrl">
+              LeetCode URL
+            </label>
+
+            <input id="leetcodeUrl" type="url" formControlName="leetcodeUrl"
+              placeholder="https://leetcode.com/problems/two-sum/" />
+
+            @if (
+            questionForm.controls.leetcodeUrl.touched &&
+            questionForm.controls.leetcodeUrl.hasError('required')
+            ) {
+            <small>
+              LeetCode URL is required.
+            </small>
+            }
+
+            @if (
+            questionForm.controls.leetcodeUrl.touched &&
+            questionForm.controls.leetcodeUrl.hasError('maxlength')
+            ) {
+            <small>
+              URL cannot exceed 500 characters.
+            </small>
+            }
+
+          </div>
+
+
+          @if (postErrorMessage) {
+          <div class="form-error">
+            {{ postErrorMessage }}
+          </div>
+          }
+
+          @if (postSuccessMessage) {
+          <div class="form-success">
+            {{ postSuccessMessage }}
+          </div>
+          }
+
+          <div class="form-actions">
+
+            <button type="button" class="cancel-button" (click)="closePostForm()">
+              Cancel
+            </button>
+
+            <button type="submit" class="submit-button" [disabled]="postingQuestion">
+
+              @if (postingQuestion) {
+              Posting...
+              } @else {
+              Post Question
+              }
+
+            </button>
+
+          </div>
+
+        </form>
+
+      </div>
+
+      }
+
+      @if (loadingQuestions) {
+
+      <div class="empty-state">
+        <p>Loading questions...</p>
+      </div>
+
+      } @else if (errorMessage) {
+
+      <div class="empty-state">
+
+        <h3>Something went wrong</h3>
+
+        <p>{{ errorMessage }}</p>
+
+        <button class="post-button" (click)="loadQuestions()">
+          Retry
+        </button>
+
+      </div>
+
+      } @else if (questions.length === 0) {
+
+      <div class="empty-state">
+
+        <h3>No questions yet</h3>
+
+        <p>
+          Questions posted by students will appear here.
+        </p>
+
+      </div>
+
+      } @else {
+
+      <div class="questions-list">
+
+        @for (question of questions; track question.questionId) {
+
+        <article class="question-card">
+
+          <div class="question-main">
+
+            <div class="question-title-row">
+
+              <h3>
+                {{ question.title }}
+              </h3>
+
+              @if (question.ownQuestion) {
+              <span class="own-badge">
+                Your Question
+              </span>
+              }
+
+            </div>
+
+            <p class="question-meta">
+
+              Posted by
+              <strong>
+                {{ question.postedByUsername }}
+              </strong>
+
+              ·
+
+              {{ question.postedAt | date:'medium' }}
+
+            </p>
+
+            @if (question.description) {
+
+            <p class="question-description">
+              {{ question.description }}
+            </p>
+
+            }
+
+          </div>
+
+
+          <div class="question-actions">
+
+            @if (question.ownQuestion) {
+
+            <span class="own-question-message">
+              You cannot attempt your own question.
+            </span>
+
+            } @else if (!question.attempted) {
+
+            <button class="start-button" [disabled]="startingQuestionId === question.questionId"
+              (click)="startAttempt(question.questionId)">
+
+              @if (startingQuestionId === question.questionId) {
+              Starting...
+              } @else {
+              Start
+              }
+
+            </button>
+
+            } @else if (question.attemptStatus === 'STARTED') {
+
+            <button class="finish-button" [disabled]="finishingQuestionId === question.questionId"
+              (click)="finishAttempt(question.questionId)">
+
+              @if (finishingQuestionId === question.questionId) {
+              Finishing...
+              } @else {
+              Finish
+              }
+
+            </button>
+
+            } @else {
+
+            <span class="attempt-status">
+
+              Completed · {{ question.attemptPoints }} points
+
+            </span>
+
+            }
+
+            <a class="leetcode-button" [href]="question.leetcodeUrl" target="_blank" rel="noopener noreferrer">
+              LeetCode
+            </a>
+
+          </div>
+
+          <button type="button" class="attempts-toggle-button" (click)="toggleQuestionAttempts(question.questionId)">
+
+            @if (expandedQuestionId === question.questionId) {
+            Hide Attempts
+            } @else {
+            View Attempts
+            }
+
+          </button>
+          @if (expandedQuestionId === question.questionId) {
+
+          <div class="attempts-panel">
+
+            <h4>Students Who Attempted</h4>
+
+            @if (loadingAttemptsQuestionId === question.questionId) {
+
+            <p class="attempts-loading">
+              Loading attempts...
+            </p>
+
+            } @else if (
+            !questionAttempts[question.questionId] ||
+            questionAttempts[question.questionId].length === 0
+            ) {
+
+            <p class="no-attempts">
+              No students have attempted this question yet.
+            </p>
+
+            } @else {
+
+            <div class="attempts-list">
+
+              @for (
+              attempt of questionAttempts[question.questionId];
+              track attempt.attemptId
+              ) {
+
+              <div class="attempt-row">
+
+                <div class="attempt-student">
+
+                  <strong>
+                    {{ attempt.studentUsername }}
+                  </strong>
+
+                  <span>
+                    {{ attempt.status }}
+                  </span>
+
+                </div>
+
+                <div class="attempt-points">
+
+                  <span>
+                    Base: {{ attempt.pointsEarned }}
+                  </span>
+
+                  <span>
+                    Bonus: {{ attempt.bonusPoints }}
+                  </span>
+
+                  <strong>
+                    Total: {{ attempt.totalPoints }}
+                  </strong>
+
+                </div>
+
+              </div>
+
+              }
+
+            </div>
+
+            }
+
+          </div>
+
+          }
+
+        </article>
+
+        }
+
+      </div>
+
+      }
+
+    </section>
+
+  </main>
+
+</div>

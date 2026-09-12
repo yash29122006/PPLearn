@@ -1,0 +1,332 @@
+<div class="admin-page">
+
+  <!-- =====================================================
+       HEADER
+       ===================================================== -->
+
+  <header class="admin-header">
+
+    <div>
+      <h1>P2P Learn — Admin</h1>
+      <p>Manage community applications and students</p>
+    </div>
+
+    <button
+      type="button"
+      class="logout-button"
+      (click)="logout()">
+      Logout
+    </button>
+
+  </header>
+
+
+  <!-- =====================================================
+       GLOBAL ERROR
+       ===================================================== -->
+
+  @if (errorMessage) {
+
+    <div class="error-message">
+      {{ errorMessage }}
+    </div>
+
+  }
+
+  <!-- =====================================================
+     DASHBOARD SUMMARY
+     ===================================================== -->
+
+<section class="admin-summary">
+
+  <div class="summary-card">
+
+    <span class="summary-label">
+      Pending Applications
+    </span>
+
+    <strong class="summary-value">
+      {{ applications.length }}
+    </strong>
+
+  </div>
+
+
+  <div class="summary-card">
+
+    <span class="summary-label">
+      Active Students
+    </span>
+
+    <strong class="summary-value">
+      {{ students.length }}
+    </strong>
+
+  </div>
+
+
+  <div class="summary-card">
+
+    <span class="summary-label">
+      Total Student Points
+    </span>
+
+    <strong class="summary-value">
+      {{ totalStudentPoints }}
+    </strong>
+
+  </div>
+
+</section>
+
+  <!-- =====================================================
+       PENDING APPLICATIONS
+       ===================================================== -->
+
+  <section class="admin-section">
+
+    <div class="section-header">
+
+      <div>
+        <h2>Pending Applications</h2>
+
+        <span class="count">
+          {{ applications.length }}
+        </span>
+      </div>
+
+      <button
+        type="button"
+        class="refresh-button"
+        (click)="loadApplications()"
+        [disabled]="loadingApplications">
+
+        @if (loadingApplications) {
+          Refreshing...
+        } @else {
+          Refresh
+        }
+
+      </button>
+
+    </div>
+
+
+    @if (loadingApplications) {
+
+      <p class="loading">
+        Loading applications...
+      </p>
+
+    } @else if (applications.length === 0) {
+
+      <div class="empty-state">
+        No pending applications.
+      </div>
+
+    } @else {
+
+      <div class="table-container">
+
+        <table>
+
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Applied On</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            @for (
+              application of applications;
+              track application.applicationId
+            ) {
+
+              <tr>
+
+                <td>
+                  <strong>
+                    {{ application.studentUsername }}
+                  </strong>
+                </td>
+
+                <td>
+                  {{ application.createdAt | date:'medium' }}
+                </td>
+
+                <td class="actions">
+
+                  <button
+                    type="button"
+                    class="accept-button"
+                    (click)="acceptApplication(application.applicationId)">
+                    Accept
+                  </button>
+
+                  <button
+                    type="button"
+                    class="reject-button"
+                    (click)="rejectApplication(application.applicationId)">
+                    Reject
+                  </button>
+
+                </td>
+
+              </tr>
+
+            }
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    }
+
+  </section>
+
+
+  <!-- =====================================================
+       ACTIVE STUDENTS
+       ===================================================== -->
+
+  <section class="admin-section">
+
+    <div class="section-header">
+
+      <div>
+        <h2>Active Students</h2>
+
+        <span class="count">
+          {{ students.length }}
+        </span>
+      </div>
+
+      <button
+        type="button"
+        class="refresh-button"
+        (click)="loadStudents()"
+        [disabled]="loadingStudents">
+
+        @if (loadingStudents) {
+          Refreshing...
+        } @else {
+          Refresh
+        }
+
+      </button>
+
+    </div>
+
+
+    <!-- Student Search -->
+
+    <div class="student-search">
+
+      <input
+        type="search"
+        [(ngModel)]="searchTerm"
+        placeholder="Search students by username or email"
+        aria-label="Search students by username or email"
+      />
+
+    </div>
+
+
+    @if (loadingStudents) {
+
+      <p class="loading">
+        Loading students...
+      </p>
+
+    } @else if (students.length === 0) {
+
+      <div class="empty-state">
+        No active students.
+      </div>
+
+    } @else if (filteredStudents.length === 0) {
+
+      <div class="empty-state">
+
+        <h3>No matching students</h3>
+
+        <p>
+          No students match your search.
+        </p>
+
+      </div>
+
+    } @else {
+
+      <div class="table-container">
+
+        <table>
+
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Total Points</th>
+              <th>Joined</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            @for (
+              student of filteredStudents;
+              track student.studentId
+            ) {
+
+              <tr>
+
+                <td>
+                  <strong>
+                    {{ student.username }}
+                  </strong>
+                </td>
+
+                <td>
+                  {{ student.email }}
+                </td>
+
+                <td>
+                  {{ student.totalPoints }}
+                </td>
+
+                <td>
+                  {{ student.createdAt | date:'mediumDate' }}
+                </td>
+
+                <td>
+
+                  <button
+                    type="button"
+                    class="remove-button"
+                    (click)="removeStudent(student.studentId)">
+                    Remove
+                  </button>
+
+                </td>
+
+              </tr>
+
+            }
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    }
+
+  </section>
+
+</div>

@@ -1,0 +1,21 @@
+# Backend
+learning/target/
+learning/.idea/
+
+# Frontend
+peer-learn-frontend/node_modules/
+peer-learn-frontend/dist/
+peer-learn-frontend/.angular/
+
+# Generated files
+*.class
+tempCodeRunnerFile.java
+
+# IDE
+.idea/
+.vscode/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
