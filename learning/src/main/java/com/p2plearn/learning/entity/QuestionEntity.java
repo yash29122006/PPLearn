@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Entity
 @Table(
@@ -28,6 +29,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class QuestionEntity {
+
+    private static final ZoneId COMPETITION_ZONE =
+            ZoneId.of("Asia/Kolkata");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -72,11 +76,11 @@ public class QuestionEntity {
     protected void onCreate() {
 
         if (postedAt == null) {
-            postedAt = LocalDateTime.now();
+            postedAt = LocalDateTime.now(COMPETITION_ZONE);
         }
 
         if (postedDate == null) {
-            postedDate = LocalDate.now();
+            postedDate = LocalDate.now(COMPETITION_ZONE);
         }
     }
 }

@@ -51,17 +51,25 @@ export class Home implements OnInit, OnDestroy {
 
   loadingQuestions = false;
   errorMessage = '';
+  private midnightTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
-    this.loadCurrentUser();
-    this.loadQuestions();
-    this.loadLeaderboard();
-    this.loadCompetition();
-    this.connectWebSocket();
-  }
+  this.loadCurrentUser();
+  this.loadQuestions();
+  this.loadLeaderboard();
+  this.loadCompetition();
+  this.connectWebSocket();
+
+  this.scheduleMidnightRefresh();
+}
   ngOnDestroy(): void {
-    this.webSocketService.disconnect();
+  this.webSocketService.disconnect();
+
+  if (this.midnightTimer !== null) {
+    clearTimeout(this.midnightTimer);
+    this.midnightTimer = null;
   }
+}
 
   loadQuestions(): void {
     this.loadingQuestions = true;
@@ -418,4 +426,67 @@ export class Home implements OnInit, OnDestroy {
       },
     });
   }
+
+  private scheduleMidnightRefresh(): void {
+  const now = new Date();
+
+  /*
+   * Convert the current time to Asia/Kolkata.
+   * IST is UTC+05:30.
+   */
+  const istFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23'
+  });
+
+  const parts = istFormatter.formatToParts(now);
+
+  const getPart = (type: string): number =>
+    Number(
+      parts.find(part => part.type === type)?.value
+    );
+
+  const year = getPart('year');
+  const month = getPart('month');
+  const day = getPart('day');
+
+  /*
+   * Calculate the next midnight in IST.
+   */
+  const nextMidnightUtc = Date.UTC(
+    year,
+    month - 1,
+    day + 1,
+    0,
+    0,
+    0
+  ) - (5 * 60 + 30) * 60 * 1000;
+
+  const delay = Math.max(
+    nextMidnightUtc - now.getTime(),
+    1000
+  );
+
+  this.midnightTimer = setTimeout(() => {
+
+    /*
+     * At 00:00 IST, reload today's questions.
+     * The backend now returns only questions whose
+     * postedDate is today's IST date.
+     */
+    this.loadQuestions();
+
+    /*
+     * Recalculate the next midnight.
+     */
+    this.scheduleMidnightRefresh();
+
+  }, delay);
+}
 }

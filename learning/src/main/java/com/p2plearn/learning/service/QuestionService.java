@@ -3,24 +3,29 @@ package com.p2plearn.learning.service;
 import com.p2plearn.learning.dto.QuestionListResponse;
 import com.p2plearn.learning.dto.QuestionRequest;
 import com.p2plearn.learning.dto.QuestionResponse;
+import com.p2plearn.learning.entity.AttemptEntity;
 import com.p2plearn.learning.entity.CompetitionEntity;
 import com.p2plearn.learning.entity.QuestionEntity;
 import com.p2plearn.learning.entity.UserEntity;
+import com.p2plearn.learning.repository.AttemptRepository;
 import com.p2plearn.learning.repository.QuestionRepository;
 import com.p2plearn.learning.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
+
 import java.time.LocalDate;
-import com.p2plearn.learning.entity.AttemptEntity;
-import com.p2plearn.learning.repository.AttemptRepository;
-import com.p2plearn.learning.service.WebSocketBroadcastService;
+import java.time.ZoneId;
+import java.util.List;
 
 @Service
 public class QuestionService {
 
-    private final WebSocketBroadcastService webSocketBroadcastService;
     private static final int QUESTION_POST_POINTS = 5;
+
+    private static final ZoneId COMPETITION_ZONE =
+            ZoneId.of("Asia/Kolkata");
+
+    private final WebSocketBroadcastService webSocketBroadcastService;
     private final AttemptRepository attemptRepository;
     private final QuestionRepository questionRepository;
     private final UserRepository userRepository;
@@ -70,8 +75,16 @@ public class QuestionService {
                 competitionService
                         .getOrCreateCurrentCompetition();
 
-        LocalDate today = LocalDate.now();
+        /*
+         * IMPORTANT:
+         * Always use India time for competition dates.
+         */
+        LocalDate today =
+                LocalDate.now(COMPETITION_ZONE);
 
+        /*
+         * One question per student per day.
+         */
         if (questionRepository
                 .existsByCompetitionAndPostedByAndPostedDate(
                         competition,
@@ -95,29 +108,45 @@ public class QuestionService {
             );
         }
 
-        QuestionEntity question = new QuestionEntity();
+        QuestionEntity question =
+                new QuestionEntity();
 
         question.setCompetition(competition);
         question.setPostedBy(student);
+
         question.setTitle(
                 request.getTitle().trim()
         );
+
         question.setDescription(
                 request.getDescription() == null
                         ? null
                         : request.getDescription().trim()
         );
+
         question.setLeetcodeUrl(leetcodeUrl);
+
+        /*
+         * Store the posting date using Asia/Kolkata.
+         */
         question.setPostedDate(today);
 
         QuestionEntity savedQuestion =
                 questionRepository.save(question);
 
+        /*
+         * Give the student 5 points for posting.
+         */
         student.setTotalPoints(
                 student.getTotalPoints()
                         + QUESTION_POST_POINTS
         );
 
+        userRepository.save(student);
+
+        /*
+         * Broadcast the newly posted question.
+         */
         webSocketBroadcastService.broadcastQuestion(
                 new QuestionResponse(
                         savedQuestion.getId(),
@@ -132,8 +161,6 @@ public class QuestionService {
                         QUESTION_POST_POINTS
                 )
         );
-
-        userRepository.save(student);
 
         return new QuestionResponse(
                 savedQuestion.getId(),
@@ -178,9 +205,27 @@ public class QuestionService {
                 competitionService
                         .getOrCreateCurrentCompetition();
 
+        /*
+         * Current date according to India time.
+         */
+        LocalDate today =
+                LocalDate.now(COMPETITION_ZONE);
+
+        /*
+         * Only return questions posted TODAY.
+         *
+         * Old questions remain in the database for weekly
+         * scoring/history, but they are no longer visible
+         * in the current day's question list.
+         */
         return questionRepository
                 .findByCompetitionOrderByPostedAtAsc(competition)
                 .stream()
+                .filter(question ->
+                        today.equals(
+                                question.getPostedDate()
+                        )
+                )
                 .map(question -> {
 
                     boolean ownQuestion =
@@ -196,7 +241,8 @@ public class QuestionService {
                                     )
                                     .orElse(null);
 
-                    boolean attempted = attempt != null;
+                    boolean attempted =
+                            attempt != null;
 
                     String attemptStatus =
                             attempted
