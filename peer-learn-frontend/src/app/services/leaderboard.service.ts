@@ -11,6 +11,11 @@ export interface LeaderboardEntry {
   weekEnd: string;
 }
 
+export interface WeeklyLeaderboard {
+  currentWeek: LeaderboardEntry[];
+  previousWeek: LeaderboardEntry[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -18,9 +23,15 @@ export class LeaderboardService {
 
   private readonly http = inject(HttpClient);
 
-  getLeaderboard(): Observable<LeaderboardEntry[]> {
-    return this.http.get<LeaderboardEntry[]>(
+  getLeaderboard(): Observable<WeeklyLeaderboard> {
+    return this.http.get<WeeklyLeaderboard>(
       '/api/leaderboard'
+    );
+  }
+
+  getPreviewLeaderboard(): Observable<LeaderboardEntry[]> {
+    return this.http.get<LeaderboardEntry[]>(
+      '/api/leaderboard/preview'
     );
   }
 }

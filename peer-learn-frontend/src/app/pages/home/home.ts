@@ -3,7 +3,11 @@ import { finalize } from 'rxjs';
 
 import { CompetitionService, Competition } from '../../services/competition.service';
 
-import { LeaderboardService, LeaderboardEntry } from '../../services/leaderboard.service';
+import {
+  LeaderboardEntry,
+  LeaderboardService,
+  WeeklyLeaderboard
+} from '../../services/leaderboard.service';
 
 import { CommonModule, DatePipe } from '@angular/common';
 
@@ -38,7 +42,8 @@ export class Home implements OnInit, OnDestroy {
   competition: Competition | null = null;
   loadingCompetition = false;
   competitionErrorMessage = '';
-  leaderboard: LeaderboardEntry[] = [];
+ currentWeekLeaderboard: LeaderboardEntry[] = [];
+previousWeekLeaderboard: LeaderboardEntry[] = [];
   loadingLeaderboard = false;
   leaderboardErrorMessage = '';
   questions: Question[] = [];
@@ -290,26 +295,22 @@ export class Home implements OnInit, OnDestroy {
   }
 
   loadLeaderboard(): void {
-    this.loadingLeaderboard = true;
-    this.leaderboardErrorMessage = '';
+  this.leaderboardService.getLeaderboard().subscribe({
+    next: (leaderboard: WeeklyLeaderboard) => {
+      this.currentWeekLeaderboard = leaderboard.currentWeek;
+      this.previousWeekLeaderboard = leaderboard.previousWeek;
+    },
+    error: (error) => {
+      console.error(
+        'Failed to load leaderboard:',
+        error
+      );
 
-    this.leaderboardService.getLeaderboard().subscribe({
-      next: (leaderboard) => {
-        this.leaderboard = leaderboard;
-        this.loadingLeaderboard = false;
-
-        this.changeDetectorRef.detectChanges();
-      },
-
-      error: () => {
-        this.loadingLeaderboard = false;
-
-        this.leaderboardErrorMessage = 'Failed to load leaderboard.';
-
-        this.changeDetectorRef.detectChanges();
-      },
-    });
-  }
+      this.currentWeekLeaderboard = [];
+      this.previousWeekLeaderboard = [];
+    }
+  });
+}
 
   connectWebSocket(): void {
     this.webSocketService
@@ -334,8 +335,9 @@ export class Home implements OnInit, OnDestroy {
         console.log('[Home] WebSocket question event:', event);
 
         if (event.type === 'QUESTION_POSTED') {
-          this.loadQuestions();
-        }
+  this.loadQuestions();
+  this.loadLeaderboard();
+}
       },
 
       error: (error) => {
@@ -352,7 +354,8 @@ export class Home implements OnInit, OnDestroy {
         if (event.type === 'ATTEMPT_UPDATED') {
           // Refresh question attempt status/points
           this.loadQuestions();
-
+          // Refresh live weekly leaderboard
+  this.loadLeaderboard();
           // If an attempts panel is currently open,
           // refresh its student list as well.
           if (this.expandedQuestionId !== null) {

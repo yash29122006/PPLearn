@@ -73,95 +73,196 @@
 
     <section class="leaderboard-section">
 
-      <div class="section-header">
+  <div class="section-header">
 
-        <div>
-          <h2>Weekly Leaderboard</h2>
-          <p>Top students in the current competition.</p>
-        </div>
+    <div>
+      <h2>Weekly Leaderboard</h2>
+      <p>Current and previous week's Top 3 students.</p>
+    </div>
 
-      </div>
+  </div>
 
-      @if (loadingLeaderboard) {
+  @if (loadingLeaderboard) {
 
-      <div class="leaderboard-empty">
-        Loading leaderboard...
-      </div>
+  <div class="leaderboard-empty">
+    Loading leaderboard...
+  </div>
 
-      } @else if (leaderboardErrorMessage) {
+  } @else if (leaderboardErrorMessage) {
 
-      <div class="leaderboard-empty">
+  <div class="leaderboard-empty">
 
-        <h3>Something went wrong</h3>
+    <h3>Something went wrong</h3>
 
-        <p>{{ leaderboardErrorMessage }}</p>
+    <p>{{ leaderboardErrorMessage }}</p>
 
-        <button class="post-button" (click)="loadLeaderboard()">
-          Retry
-        </button>
+    <button class="post-button" (click)="loadLeaderboard()">
+      Retry
+    </button>
 
-      </div>
+  </div>
 
-      } @else if (leaderboard.length === 0) {
+  } @else {
 
-      <div class="leaderboard-empty">
+  <!-- CURRENT WEEK -->
 
-        <h3>No leaderboard yet</h3>
+  <div class="leaderboard-week">
 
+    <div class="leaderboard-week-header">
+      <div>
+        <h3>Current Week — Live Top 3</h3>
+
+        @if (currentWeekLeaderboard.length > 0) {
         <p>
-          The weekly leaderboard will appear here.
+          {{ currentWeekLeaderboard[0].weekStart | date:'dd MMM yyyy' }}
+          -
+          {{ currentWeekLeaderboard[0].weekEnd | date:'dd MMM yyyy' }}
         </p>
-
+        }
       </div>
+    </div>
 
-      } @else {
+    @if (currentWeekLeaderboard.length === 0) {
 
-      <div class="leaderboard-list">
+    <div class="leaderboard-empty">
+      <p>No students have scored points this week yet.</p>
+    </div>
 
-        @for (
-        entry of leaderboard;
-        track entry.studentId
-        ) {
+    } @else {
 
-        <div class="leaderboard-row" [class.current-user]="
-            entry.studentId === currentUser?.userId
-          ">
+    <div class="leaderboard-list">
 
-          <div class="leaderboard-rank">
-            #{{ entry.rank }}
-          </div>
+      @for (
+      entry of currentWeekLeaderboard;
+      track entry.studentId
+      ) {
 
-          <div class="leaderboard-student">
+      <div
+        class="leaderboard-row"
+        [class.current-user]="
+          entry.studentId === currentUser?.userId
+        "
+      >
 
-            <strong>
-              {{ entry.studentUsername }}
-            </strong>
+        <div class="leaderboard-rank">
+          #{{ entry.rank }}
+        </div>
 
-            @if (entry.studentId === currentUser?.userId) {
-            <span class="you-badge">You</span>
-            }
+        <div class="leaderboard-student">
 
-          </div>
+          <strong>
+            {{ entry.studentUsername }}
+          </strong>
 
-          <div class="leaderboard-points">
-
-            <strong>
-              {{ entry.totalPoints }}
-            </strong>
-
-            <span>points</span>
-
-          </div>
+          @if (entry.studentId === currentUser?.userId) {
+          <span class="you-badge">
+            You
+          </span>
+          }
 
         </div>
 
-        }
+        <div class="leaderboard-points">
+
+          <strong>
+            {{ entry.totalPoints }}
+          </strong>
+
+          <span>
+            points
+          </span>
+
+        </div>
 
       </div>
 
       }
 
-    </section>
+    </div>
+
+    }
+
+  </div>
+
+
+  <!-- PREVIOUS WEEK -->
+
+  <div class="leaderboard-week previous-week">
+
+    <div class="leaderboard-week-header">
+
+      <div>
+        <h3>Previous Week — Final Top 3</h3>
+
+        @if (previousWeekLeaderboard.length > 0) {
+        <p>
+          {{ previousWeekLeaderboard[0].weekStart | date:'dd MMM yyyy' }}
+          -
+          {{ previousWeekLeaderboard[0].weekEnd | date:'dd MMM yyyy' }}
+        </p>
+        }
+      </div>
+
+    </div>
+
+    @if (previousWeekLeaderboard.length === 0) {
+
+    <div class="leaderboard-empty">
+
+      <p>
+        No finalized leaderboard is available yet.
+      </p>
+
+    </div>
+
+    } @else {
+
+    <div class="leaderboard-list">
+
+      @for (
+      entry of previousWeekLeaderboard;
+      track entry.studentId
+      ) {
+
+      <div class="leaderboard-row">
+
+        <div class="leaderboard-rank">
+          #{{ entry.rank }}
+        </div>
+
+        <div class="leaderboard-student">
+
+          <strong>
+            {{ entry.studentUsername }}
+          </strong>
+
+        </div>
+
+        <div class="leaderboard-points">
+
+          <strong>
+            {{ entry.totalPoints }}
+          </strong>
+
+          <span>
+            points
+          </span>
+
+        </div>
+
+      </div>
+
+      }
+
+    </div>
+
+    }
+
+  </div>
+
+  }
+
+</section>
 
     <section class="questions-section">
 
