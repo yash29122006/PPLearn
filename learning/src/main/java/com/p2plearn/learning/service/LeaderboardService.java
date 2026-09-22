@@ -1,5 +1,7 @@
 package com.p2plearn.learning.service;
+
 import com.p2plearn.learning.dto.LeaderboardResponse;
+import com.p2plearn.learning.dto.WeeklyLeaderboardResponse;
 import com.p2plearn.learning.entity.AttemptEntity;
 import com.p2plearn.learning.entity.CompetitionEntity;
 import com.p2plearn.learning.entity.LeaderboardEntity;
@@ -13,7 +15,9 @@ import com.p2plearn.learning.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.IntStream;
 
 @Service
 public class LeaderboardService {
@@ -53,35 +57,46 @@ public class LeaderboardService {
         generateLeaderboardForCompetition(competition);
     }
 
+    /**
+     * Returns both:
+     *
+     * 1. Current week's live Top 3
+     * 2. Previous week's finalized Top 3
+     */
     @Transactional(readOnly = true)
-    public List<LeaderboardResponse> getCurrentLeaderboard() {
+    public WeeklyLeaderboardResponse getCurrentLeaderboard() {
 
-        CompetitionEntity competition =
+        CompetitionEntity currentCompetition =
+                competitionService.getOrCreateCurrentCompetition();
+
+        List<LeaderboardResponse> currentWeek =
+                calculateLeaderboardForCompetition(currentCompetition);
+
+        LocalDate currentWeekStart =
+                currentCompetition.getWeekStart();
+
+        CompetitionEntity previousCompetition =
                 competitionRepository
-                        .findFirstByStatusOrderByWeekStartDesc(
-                                CompetitionEntity.CompetitionStatus
-                                        .LEADERBOARD_VISIBLE
+                        .findFirstByStatusAndWeekEndBeforeOrderByWeekStartDesc(
+                                CompetitionEntity.CompetitionStatus.LEADERBOARD_VISIBLE,
+                                currentWeekStart
                         )
                         .orElse(null);
 
-        if (competition == null) {
-            return List.of();
-        }
+        List<LeaderboardResponse> previousWeek =
+                previousCompetition == null
+                        ? List.of()
+                        : getLeaderboardForCompetition(previousCompetition);
 
-        return leaderboardRepository
-                .findByCompetitionOrderByRankAsc(competition)
-                .stream()
-                .map(entry -> new LeaderboardResponse(
-                        entry.getRank(),
-                        entry.getStudent().getId(),
-                        entry.getStudent().getUsername(),
-                        entry.getTotalPoints(),
-                        competition.getWeekStart(),
-                        competition.getWeekEnd()
-                ))
-                .toList();
+        return new WeeklyLeaderboardResponse(
+                currentWeek,
+                previousWeek
+        );
     }
 
+    /**
+     * Creates and stores the final Top 3 for a competition.
+     */
     @Transactional
     public void generateLeaderboardForCompetition(
             CompetitionEntity competition
@@ -89,44 +104,8 @@ public class LeaderboardService {
 
         leaderboardRepository.deleteByCompetition(competition);
 
-        List<UserEntity> students =
-                userRepository
-                        .findByRoleAndActiveTrueOrderByCreatedAtAsc(
-                                UserEntity.Role.STUDENT
-                        );
-
         List<UserWeeklyScore> scores =
-                students.stream()
-                        .map(student ->
-                                new UserWeeklyScore(
-                                        student,
-                                        calculateWeeklyPoints(
-                                                competition,
-                                                student
-                                        )
-                                )
-                        )
-                        .sorted((first, second) -> {
-
-                            int pointsComparison =
-                                    Integer.compare(
-                                            second.points(),
-                                            first.points()
-                                    );
-
-                            if (pointsComparison != 0) {
-                                return pointsComparison;
-                            }
-
-                            return first.student()
-                                    .getCreatedAt()
-                                    .compareTo(
-                                            second.student()
-                                                    .getCreatedAt()
-                                    );
-                        })
-                        .limit(3)
-                        .toList();
+                calculateScores(competition);
 
         for (int i = 0; i < scores.size(); i++) {
 
@@ -144,10 +123,87 @@ public class LeaderboardService {
         }
     }
 
+    /**
+     * Calculates the live Top 3 for the active competition.
+     * Nothing is persisted.
+     */
+    @Transactional(readOnly = true)
+    public List<LeaderboardResponse> calculateLeaderboardForCompetition(
+            CompetitionEntity competition
+    ) {
+
+        List<UserWeeklyScore> scores =
+                calculateScores(competition);
+
+        return IntStream
+                .range(0, scores.size())
+                .mapToObj(index -> {
+
+                    UserWeeklyScore score = scores.get(index);
+
+                    return new LeaderboardResponse(
+                            index + 1,
+                            score.student().getId(),
+                            score.student().getUsername(),
+                            score.points(),
+                            competition.getWeekStart(),
+                            competition.getWeekEnd()
+                    );
+                })
+                .toList();
+    }
+
+    /**
+     * Calculates weekly scores for every active student.
+     */
+    private List<UserWeeklyScore> calculateScores(
+            CompetitionEntity competition
+    ) {
+
+        List<UserEntity> students =
+                userRepository
+                        .findByRoleAndActiveTrueOrderByCreatedAtAsc(
+                                UserEntity.Role.STUDENT
+                        );
+
+        return students.stream()
+                .map(student ->
+                        new UserWeeklyScore(
+                                student,
+                                calculateWeeklyPoints(
+                                        competition,
+                                        student
+                                )
+                        )
+                )
+                .sorted((first, second) -> {
+
+                    int pointsComparison =
+                            Integer.compare(
+                                    second.points(),
+                                    first.points()
+                            );
+
+                    if (pointsComparison != 0) {
+                        return pointsComparison;
+                    }
+
+                    return first.student()
+                            .getCreatedAt()
+                            .compareTo(
+                                    second.student()
+                                            .getCreatedAt()
+                            );
+                })
+                .limit(3)
+                .toList();
+    }
+
     private int calculateWeeklyPoints(
             CompetitionEntity competition,
             UserEntity student
     ) {
+
         int points = 0;
 
         List<QuestionEntity> questions =
@@ -156,7 +212,7 @@ public class LeaderboardService {
                                 competition
                         );
 
-        // 5 points for every question posted by this student
+        // 5 points for every question posted by this student.
         for (QuestionEntity question : questions) {
 
             if (question.getPostedBy()
@@ -167,7 +223,7 @@ public class LeaderboardService {
             }
         }
 
-        // Points from completed attempts in this competition
+        // Points from completed attempts in this competition.
         List<AttemptEntity> attempts =
                 attemptRepository.findByQuestionCompetition(
                         competition
@@ -194,70 +250,25 @@ public class LeaderboardService {
     ) {
     }
 
+    /**
+     * Admin preview of the current week's live leaderboard.
+     */
     @Transactional(readOnly = true)
     public List<LeaderboardResponse> previewCurrentLeaderboard() {
 
         CompetitionEntity competition =
                 competitionService.getOrCreateCurrentCompetition();
 
-        List<UserWeeklyScore> scores =
-                userRepository
-                        .findByRoleAndActiveTrueOrderByCreatedAtAsc(
-                                UserEntity.Role.STUDENT
-                        )
-                        .stream()
-                        .map(student ->
-                                new UserWeeklyScore(
-                                        student,
-                                        calculateWeeklyPoints(
-                                                competition,
-                                                student
-                                        )
-                                )
-                        )
-                        .sorted((first, second) -> {
-
-                            int comparison =
-                                    Integer.compare(
-                                            second.points(),
-                                            first.points()
-                                    );
-
-                            if (comparison != 0) {
-                                return comparison;
-                            }
-
-                            return first.student()
-                                    .getCreatedAt()
-                                    .compareTo(
-                                            second.student()
-                                                    .getCreatedAt()
-                                    );
-                        })
-                        .limit(3)
-                        .toList();
-
-        return java.util.stream.IntStream
-                .range(0, scores.size())
-                .mapToObj(index -> {
-
-                    UserWeeklyScore score = scores.get(index);
-
-                    return new LeaderboardResponse(
-                            index + 1,
-                            score.student().getId(),
-                            score.student().getUsername(),
-                            score.points(),
-                            competition.getWeekStart(),
-                            competition.getWeekEnd()
-                    );
-                })
-                .toList();
+        return calculateLeaderboardForCompetition(competition);
     }
 
+    /**
+     * Returns the stored/finalized leaderboard for a competition.
+     */
     private List<LeaderboardResponse> getLeaderboardForCompetition(
             CompetitionEntity competition
     ) {
+
         return leaderboardRepository
                 .findByCompetitionOrderByRankAsc(competition)
                 .stream()
@@ -275,6 +286,7 @@ public class LeaderboardService {
     public void broadcastLeaderboard(
             CompetitionEntity competition
     ) {
+
         webSocketBroadcastService.broadcastLeaderboard(
                 getLeaderboardForCompetition(competition)
         );
