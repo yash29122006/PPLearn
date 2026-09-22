@@ -295,23 +295,38 @@ previousWeekLeaderboard: LeaderboardEntry[] = [];
   }
 
   loadLeaderboard(): void {
+  this.loadingLeaderboard = true;
+  this.leaderboardErrorMessage = '';
+
   this.leaderboardService.getLeaderboard().subscribe({
     next: (leaderboard: WeeklyLeaderboard) => {
-      this.currentWeekLeaderboard = leaderboard.currentWeek;
-      this.previousWeekLeaderboard = leaderboard.previousWeek;
+      console.log('[Home] Leaderboard response:', leaderboard);
+
+      this.currentWeekLeaderboard = leaderboard.currentWeek ?? [];
+      this.previousWeekLeaderboard = leaderboard.previousWeek ?? [];
+
+      this.loadingLeaderboard = false;
+
+      this.changeDetectorRef.detectChanges();
     },
+
     error: (error) => {
       console.error(
-        'Failed to load leaderboard:',
+        '[Home] Failed to load leaderboard:',
         error
       );
 
       this.currentWeekLeaderboard = [];
       this.previousWeekLeaderboard = [];
+
+      this.loadingLeaderboard = false;
+      this.leaderboardErrorMessage =
+        'Failed to load leaderboard. Please try again.';
+
+      this.changeDetectorRef.detectChanges();
     }
   });
 }
-
   connectWebSocket(): void {
     this.webSocketService
       .connect()
